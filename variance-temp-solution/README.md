@@ -66,7 +66,7 @@ A universal monosyllabic phoneme system has "C(m)-V-C(n)" (m,n >= 0) phoneme pat
 
 We recommand this step be manually performed because word divisions cannot be infered from phoneme sequences in these phoneme systems.
 
-> After finishing this step, the transcriptions.csv file can be directly used to train the phoneme duration predictor (it only needs rough MIDI sequences extracted from wave files). If you want to train a pitch predictor, you must finish the remaining steps as follows, otherwise the predictions will not be accurate.
+> After finishing this step, the transcriptions.csv file can be directly used to train the phoneme duration predictor. If you want to train a pitch predictor, you must finish the remaining steps as follows.
 >
 
 ## 4. Estimate note values
@@ -80,7 +80,9 @@ note_seq     |     rest      |    D#3    | D#3 |  C4   |  => note sequence
 note_slur    |       0       |     0     |  0  |   1   |  => slur flag (will not be stored)
 ```
 
-Note sequences can be automatically estimated and manually refined.
+Note sequences can be automatically estimated and manually refined in two ways.
+
+### 4.1 Infer a rough pitch value for each word
 
 The following program can infer a rough note value for each word. There are no slurs - slurs are hard to judge, and different people have different labeling styles.
 
@@ -89,6 +91,14 @@ Run:
 ```bash
 python estimate_midi.py path/to/your/transcriptions.csv path/to/your/wavs
 ```
+
+> **IMPORTANT**
+> 
+> This step only estimates the rough MIDI value for each word. You have to refine the MIDI sequences, otherwise the pitch predictor will not be accurate.
+
+### 4.2 (New!) Use the AI-powered MIDI extractor - SOME
+
+SOME (Singing-Oriented MIDI Extractor) is a NN-based MIDI extractor developed under the DiffSinger ecosystem. See guidance [here](https://github.com/openvpi/SOME#inference-via-pretrained-model-diffsinger-dataset) for using it on your DiffSinger dataset.
 
 ## 5. Refine MIDI sequences
 
@@ -102,9 +112,15 @@ python convert_ds.py csv2ds path/to/your/transcriptions.csv path/to/your/wavs
 
 This will generate *.ds files matching your *.wav files in the same directory.
 
+> **IMPORTANT**
+> 
+> In this step, we highly recommend using RMVPE, a more accurate NN-based pitch extraction algorithm, to get better pitch results. See guidance [here](#rmvpe-pitch-extraction-algorithm).
+> 
+> Also note that after you finish manual MIDI refinement, please use the **same algorithm** and **same model** in your DiffSinger configuration files for variance model training to get the best results.
+
 ### 5.2 manually edit MIDI sequences
 
-Get the latest release of SlurCutter from [here](https://github.com/openvpi/MakeDiffSinger/releases/tag/v0.0.1-slurcutter-v0.0.1.2). This simple tool helps you adjust MIDI pitch in each DS file and cut notes into slurs if neccessary. Be sure to backup your DS files before you start, since this tool will automatically save and overwrite an edited DS file.
+Get the latest release of SlurCutter from [here](../README.md#essential-tools-to-process-and-label-your-datasets). This simple tool helps you adjust MIDI pitch in each DS file and cut notes into slurs if neccessary. Be sure to back up your DS files before you start, since this tool will automatically save and overwrite an edited DS file.
 
 ### 5.3 re-combine DS files into transcriptions.csv
 
@@ -127,6 +143,7 @@ Now the transcriptions.csv can be used for all functionalities of DiffSinger tra
 convert_ds.py and estimate_midi.py supports the state-of-the-art RMVPE pitch extraction algorithm. To use it:
 
 - Install PyTorch via [official guidance](https://pytorch.org/get-started/locally/).
+- Get RMVPE pretrained model [here](https://github.com/yxlllc/RMVPE/releases).
 - Put the RMVPE model.pt in `variance-temp-solution/assets/rmvpe/`.
 - Use `--pe rmvpe` when running `python convert_ds.py csv2ds` or `python estimate_midi.py`.
 
